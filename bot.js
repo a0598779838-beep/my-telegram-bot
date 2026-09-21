@@ -1,7 +1,7 @@
 const TelegramBot = require('node-telegram-bot-api');
 
 // التوكن الخاص بك
-const token = '8641444645:AAFh9VmS_kDy3j5YTZTuLDiOdBtgNdI6M4Y';
+const token = '8641444645:AAG5dWsDn-n987QqYOyxoWF2Zrgdrs0171U';
 const bot = new TelegramBot(token, { polling: true });
 
 // الإعدادات الافتراضية
