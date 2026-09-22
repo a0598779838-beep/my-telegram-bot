@@ -1,4 +1,11 @@
+const express = require('express');
+const app = express();
+app.get('/', (req, res) => res.send('Bot is Alive!'));
+const port = process.env.PORT || 3000;
+app.listen(port, () => console.log(`Server listening on port ${port}`));
 
+const TelegramBot = require('node-telegram-bot-api');
+// .. بقية كود البوت كما هو أسفل هذا
 const http = require('http');
 // السيرفر الوهمي لمنع توقف Render
 http.createServer((req, res) => res.end('Bot is running')).listen(process.env.PORT || 3000);
