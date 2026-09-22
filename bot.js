@@ -1,25 +1,21 @@
+// 1. إعدادات السيرفر الوهمي (لمنع توقف السيرفر في Render)
 const express = require('express');
 const app = express();
 app.get('/', (req, res) => res.send('Bot is Alive!'));
 const port = process.env.PORT || 3000;
 app.listen(port, () => console.log(`Server listening on port ${port}`));
 
+// 2. إعدادات البوت الأساسية
 const TelegramBot = require('node-telegram-bot-api');
-// .. بقية كود البوت كما هو أسفل هذا
-const http = require('http');
-// السيرفر الوهمي لمنع توقف Render
-http.createServer((req, res) => res.end('Bot is running')).listen(process.env.PORT || 3000);
-
-const TelegramBot = require('node-telegram-bot-api');
-
-const token = '8641444645:AAFh9VmS_kDy3j5YTZTuLDiOdBtgNdI6M4Y';
+const token = '8641444645:AAFh9VmS_kDy3j5YTZTuLDiOdBtgNdI6M4Y'; // تأكد أن هذا هو التوكن الجديد والصحيح
 const bot = new TelegramBot(token, { polling: true });
 
+// الإعدادات الافتراضية
 const PREFS = {
     filterLinks: true,
     filterBadWords: true,
     enableReminder: true,
-    reminderFrequency: 5, // غيرناه لـ 5 مؤقتاً لتجربته بسرعة
+    reminderFrequency: 5, // العدد الافتراضي للتذكير (5 للتجربة، يمكنك تغييره لاحقاً من التلجرام)
     reminderMessage: "📢 تذكير للجميع: يرجى الالتزام بقوانين المجموعة وعدم نشر أي روابط خارجية. بيع وشراء ممتع للجميع! 🛍️"
 };
 
@@ -28,7 +24,10 @@ const userOffenses = {};
 const badWords = ["نصاب", "محتال", "كذاب", "سرقة", "غبي", "حقير"];
 const urlRegex = /\b((?:https?:\/\/|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}\/)(?:[^\s()<>]+|\((?:[^\s()<>]+|\([^\s()<>]+\))\))+(?:\((?:[^\s()<>]+|\([^\s()<>]+\))\)|[^\s`!()\[\]{};:'".,<>?«»“”‘’]))/i;
 
-// أمر لتغيير الرسالة
+
+// 3. أوامر التحكم بالبوت من التلجرام (خاصة بالمشرفين فقط)
+
+// أمر تغيير رسالة التذكير
 bot.onText(/\/setreminder (.*)/, async (msg, match) => {
     const chatId = msg.chat.id;
     const userId = msg.from.id;
@@ -40,12 +39,12 @@ bot.onText(/\/setreminder (.*)/, async (msg, match) => {
             PREFS.reminderMessage = newReminderText;
             bot.sendMessage(chatId, "✅ تم تحديث رسالة التذكير بنجاح!");
         } else {
-            bot.sendMessage(chatId, "❌ عذراً، فقط مشرفو المجموعة يمكنهم ذلك.");
+            bot.sendMessage(chatId, "❌ عذراً، فقط مشرفو المجموعة يمكنهم تغيير رسالة التذكير.");
         }
-    } catch (error) { console.error(error.message); }
+    } catch (error) { console.error("خطأ:", error.message); }
 });
 
-// أمر لتغيير متى يتم إرسال الرسالة (العدد)
+// أمر لتغيير عدد الرسائل المطلوبة للتذكير
 bot.onText(/\/setcount (\d+)/, async (msg, match) => {
     const chatId = msg.chat.id;
     const userId = msg.from.id;
@@ -57,26 +56,29 @@ bot.onText(/\/setcount (\d+)/, async (msg, match) => {
             PREFS.reminderFrequency = newCount;
             bot.sendMessage(chatId, `✅ تم التحديث! سيتم إرسال التذكير كل ${newCount} رسائل.`);
         }
-    } catch (error) { console.error(error.message); }
+    } catch (error) { console.error("خطأ:", error.message); }
 });
 
+
+// 4. العمليات الأساسية (العداد، منع الروابط، الحظر)
 bot.on('message', async (msg) => {
-    // 1. عداد الرسائل (يعمل على كل أنواع الرسائل الآن!)
-    if (!msg.text || !msg.text.startsWith('/')) { // لا يعد الأوامر مثل /start
+    
+    // 4.1. عداد الرسائل (يعمل على جميع الرسائل ما عدا الأوامر)
+    if (!msg.text || !msg.text.startsWith('/')) { 
         const chatId = msg.chat.id;
         messageCounts[chatId] = (messageCounts[chatId] || 0) + 1;
         
         if (PREFS.enableReminder && messageCounts[chatId] >= PREFS.reminderFrequency) {
             bot.sendMessage(chatId, PREFS.reminderMessage);
-            messageCounts[chatId] = 0; // تصفير العداد بعد الإرسال
+            messageCounts[chatId] = 0; // تصفير العداد
         }
     }
 
-    // 2. نظام الحماية (يعمل فقط إذا كان هناك نص في الرسالة أو الصورة)
+    // 4.2. نظام الحماية وفحص الكلمات البذيئة والروابط
     const textContent = msg.text || msg.caption || ""; 
     if (textContent.trim() === "") return;
 
-    // تجاهل الأوامر في الحماية
+    // تجاهل الرسائل التي تبدأ بشرطة مائلة (لأنها أوامر)
     if (textContent.startsWith('/')) return;
 
     const chatId = msg.chat.id;
@@ -89,9 +91,11 @@ bot.on('message', async (msg) => {
     if (hasLink || hasBadWord) {
         try {
             await bot.deleteMessage(chatId, messageId);
+
             const userKey = `${chatId}_${userId}`;
             userOffenses[userKey] = (userOffenses[userKey] || 0) + 1;
             const offenseCount = userOffenses[userKey];
+
             const userName = msg.from.first_name || "عزيزي";
             const reason = hasLink ? "الروابط" : "الكلمات غير اللائقة";
 
@@ -108,12 +112,14 @@ bot.on('message', async (msg) => {
             } else if (offenseCount === 2) {
                 const untilDate = Math.floor(Date.now() / 1000) + (60 * 60);
                 await bot.restrictChatMember(chatId, userId, { permissions: permissions, until_date: untilDate });
-                bot.sendMessage(chatId, `عذراً ${userName}، ${reason} ممنوعة! 🚫\nالتحذير الثاني: كتم لمدة ساعة.`);
+                bot.sendMessage(chatId, `عذراً ${userName}، ${reason} ممنوعة! 🚫\nالتحذير الثاني: كتم لمدة ساعة كاملة.`);
             } else {
                 await bot.banChatMember(chatId, userId);
                 bot.sendMessage(chatId, `تم حظر ${userName} نهائياً بسبب تكرار المخالفات. 🚫🔨`);
             }
-        } catch (error) { console.error("خطأ حماية:", error.message); }
+        } catch (error) { 
+            console.error("خطأ حماية (ربما المستخدم مشرف):", error.message); 
+        }
     }
 });
 
