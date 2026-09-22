@@ -7,7 +7,7 @@ app.listen(port, () => console.log(`Server listening on port ${port}`));
 
 // 2. إعدادات البوت الأساسية
 const TelegramBot = require('node-telegram-bot-api');
-const token = '8641444645:AAFh9VmS_kDy3j5YTZTuLDiOdBtgNdI6M4Y'; // تأكد أن هذا هو التوكن الجديد والصحيح
+const token = '8641444645:AAG5dWsDn-n987QqYOyxoWF2Zrgdrs0171U'; // تأكد أن هذا هو التوكن الجديد والصحيح
 const bot = new TelegramBot(token, { polling: true });
 
 // الإعدادات الافتراضية
